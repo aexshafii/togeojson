@@ -16,7 +16,6 @@
             <div class='clearfix col12'>
                 <div class='col6'>
                     <select id='format'>
-                        <option value='kml'>KML</option>
                         <option value='gpx'>GPX</option>
                     </select>
                     <input type="file" id="fileInput" multiple />
@@ -81,6 +80,9 @@
         </div>
         <div id='output'></div>
         <script src='togeojson.js'></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+        
         <script>
             
 var out = document.getElementById('output');
@@ -90,38 +92,22 @@ var downloadBtn = document.getElementById('downloadBtn');
 
 
 
-fileInput.addEventListener('change', async (e) => {
-    if (fileInput.files.length === 0) {
-        console.log('No files selected.');
-        return;
+// Event listener for file input, using modern syntax
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        downloadAllGeoJSON(e.target.files);
     }
-
-    const files = Array.from(fileInput.files);
-
-    files.forEach(async (file) => {
-        try {
-            const content = await readFileAsText(file);
-            const doc = new DOMParser().parseFromString(content, 'text/xml');
-            const geoJson = toGeoJSON[format.value](doc);
-            const geoJsonString = JSON.stringify(geoJson, null, 4);
-            // Create a filename from the original file name, replacing the extension with .geojson
-            let filename = file.name.replace(/\.[^/.]+$/, "") + ".geojson";
-            downloadGeoJSON(geoJsonString, filename);
-        } catch (error) {
-            console.error("Error processing file:", error);
-        }
-    });
 });
 
 // Utility function to read file as text
-function readFileAsText(file) {
+const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(reader.error);
         reader.readAsText(file);
     });
-}
+};
 
 
 // Listen to format change as well
@@ -139,22 +125,31 @@ format.addEventListener('change', function() {
 // };
 // update();
 
-// Function to create and download the GeoJSON file
-function downloadGeoJSON(geoJsonString, filename = "converted.geojson") {
-    const blob = new Blob([geoJsonString], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
+// Function to download all processed GeoJSON files as a single ZIP
+const downloadAllGeoJSON = async (files) => {
+    const zip = new JSZip();
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename; 
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
+    // Process each file and add to ZIP
+    for (const file of files) {
+        try {
+            const content = await readFileAsText(file);
+            const doc = new DOMParser().parseFromString(content, 'text/xml');
+            const geoJson = toGeoJSON[format.value](doc);
+            const geoJsonString = JSON.stringify(geoJson, null, 4);
+            const filename = file.name.replace(/\.[^/.]+$/, "") + ".geojson";
+            zip.file(filename, geoJsonString);
+        } catch (error) {
+            console.error("Error processing file:", error);
+        }
+    }
+
+    // Generate the ZIP file and trigger the download
+    const content = await zip.generateAsync({type: "blob"});
+    saveAs(content, "geojson_files.zip");
+};
 
 // Add click event listener for the download button
-downloadBtn.addEventListener('click', downloadGeoJSON);
+downloadBtn.addEventListener('click', downloadAllGeoJSON);
         </script>
         <script type="text/javascript">
   var _gauges = _gauges || [];
