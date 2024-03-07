@@ -19,7 +19,7 @@
                         <option value='kml'>KML</option>
                         <option value='gpx'>GPX</option>
                     </select>
-                    <input type="file" id="fileInput" />
+                    <input type="file" id="fileInput" multiple />
                     <textarea id='in'>
 &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;kml xmlns=&quot;http://www.opengis.net/kml/2.2&quot;&gt;
@@ -91,25 +91,38 @@ var downloadBtn = document.getElementById('downloadBtn');
 
 
 // Update the processing to handle file input
-fileInput.addEventListener('change', function(e) {
-    if (this.files.length === 0) {
-        console.log('No file selected.');
+fileInput.addEventListener('change', async (e) => {
+    if (fileInput.files.length === 0) {
+        console.log('No files selected.');
         return;
     }
 
-    var file = this.files[0];
-    var reader = new FileReader();
+    const files = Array.from(fileInput.files);
 
-    reader.onload = function(e) {
-        var content = e.target.result;
-        
-        // Convert the uploaded file's content to GeoJSON
-        var doc = (new DOMParser()).parseFromString(content, 'text/xml');
-        out.value = JSON.stringify(toGeoJSON[format.value](doc), null, 4);
-    };
-
-    reader.readAsText(file);
+    files.forEach(async (file) => {
+        try {
+            const content = await readFileAsText(file);
+            const doc = new DOMParser().parseFromString(content, 'text/xml');
+            const geoJson = toGeoJSON[format.value](doc);
+            const geoJsonString = JSON.stringify(geoJson, null, 4);
+            // Create a filename from the original file name, replacing the extension with .geojson
+            let filename = file.name.replace(/\.[^/.]+$/, "") + ".geojson";
+            downloadGeoJSON(geoJsonString, filename);
+        } catch (error) {
+            console.error("Error processing file:", error);
+        }
+    });
 });
+
+// Utility function to read file as text using FileReader with Promise for async/await usage
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file);
+    });
+}
 
 
 // Listen to format change as well
@@ -128,23 +141,13 @@ format.addEventListener('change', function() {
 // update();
 
 // Function to create and download the GeoJSON file
-function downloadGeoJSON() {
-    var text = out.value;
-    var geoJson = JSON.parse(out.value); // Parse the GeoJSON from the output textarea
-    var defaultFilename = "converted.geojson"; // A default filename in case 'name' is not found
-    var filename = defaultFilename;
+function downloadGeoJSON(geoJsonString, filename = "converted.geojson") {
+    const blob = new Blob([geoJsonString], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
 
-    // Check if there's a 'features' array and it has at least one feature with a 'name' property
-    if (geoJson.features && geoJson.features.length > 0 && geoJson.features[0].properties && geoJson.features[0].properties.name) {
-        // Use the 'name' property value for the filename, replacing spaces with underscores and appending '.geojson'
-        filename = geoJson.features[0].properties.name.replace(/\s+/g, '_') + ".geojson";
-    }
-    var blob = new Blob([text], {type: "application/json"});
-    var url = URL.createObjectURL(blob);
-
-    var a = document.createElement('a');
+    const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = filename; // Use the provided filename
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
