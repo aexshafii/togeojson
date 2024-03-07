@@ -36,8 +36,10 @@
                 </div>
                 <div class='col6'>
                     <strong class='h30'>GeoJSON</strong>
+                    <button id="downloadBtn"> Download </button>
                     <textarea id='output'></textarea></div>
             </div>
+            
             <div class='pad2 center'>
                 <a class='button' href='https://raw.githubusercontent.com/mapbox/togeojson/master/togeojson.js' download='togeojson.js'>⬇ togeojson.js <small>less than 10 kB minified</small></a>
                 <br /><br />
@@ -84,6 +86,7 @@
 var out = document.getElementById('output');
 var format = document.getElementById('format');
 var fileInput = document.getElementById('fileInput');
+var downloadBtn = document.getElementById('downloadBtn');
 
 
 
@@ -108,6 +111,7 @@ fileInput.addEventListener('change', function(e) {
     reader.readAsText(file);
 });
 
+
 // Listen to format change as well
 format.addEventListener('change', function() {
     // Trigger file processing if a file is already selected
@@ -122,6 +126,33 @@ format.addEventListener('change', function() {
 //     out.value = JSON.stringify(toGeoJSON[format.value]((new DOMParser()).parseFromString(input.value, 'text/xml')), null, 4);
 // };
 // update();
+
+// Function to create and download the GeoJSON file
+function downloadGeoJSON() {
+    var text = out.value;
+    var geoJson = JSON.parse(out.value); // Parse the GeoJSON from the output textarea
+    var defaultFilename = "converted.geojson"; // A default filename in case 'name' is not found
+    var filename = defaultFilename;
+
+    // Check if there's a 'features' array and it has at least one feature with a 'name' property
+    if (geoJson.features && geoJson.features.length > 0 && geoJson.features[0].properties && geoJson.features[0].properties.name) {
+        // Use the 'name' property value for the filename, replacing spaces with underscores and appending '.geojson'
+        filename = geoJson.features[0].properties.name.replace(/\s+/g, '_') + ".geojson";
+    }
+    var blob = new Blob([text], {type: "application/json"});
+    var url = URL.createObjectURL(blob);
+
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Add click event listener for the download button
+downloadBtn.addEventListener('click', downloadGeoJSON);
         </script>
         <script type="text/javascript">
   var _gauges = _gauges || [];
