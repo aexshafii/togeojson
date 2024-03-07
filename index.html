@@ -107,6 +107,14 @@ fileInput.addEventListener('change', function(e) {
 
     reader.readAsText(file);
 });
+
+// Listen to format change as well
+format.addEventListener('change', function() {
+    // Trigger file processing if a file is already selected
+    if (fileInput.files.length > 0) {
+        fileInput.dispatchEvent(new Event('change'));
+    }
+});
 // var input = document.getElementById('in');
 // var out = document.getElementById('output');
 // var format = document.getElementById('format');
