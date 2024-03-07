@@ -19,6 +19,7 @@
                         <option value='kml'>KML</option>
                         <option value='gpx'>GPX</option>
                     </select>
+                    <input type="file" id="fileInput" />
                     <textarea id='in'>
 &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;kml xmlns=&quot;http://www.opengis.net/kml/2.2&quot;&gt;
@@ -74,17 +75,45 @@
                     </p>
                 </div>
             </div>
+          
         </div>
         <div id='output'></div>
         <script src='togeojson.js'></script>
         <script>
-var input = document.getElementById('in');
+            
 var out = document.getElementById('output');
 var format = document.getElementById('format');
-input.onchange = input.onkeyup = format.onchange = update = function() {
-    out.value = JSON.stringify(toGeoJSON[format.value]((new DOMParser()).parseFromString(input.value, 'text/xml')), null, 4);
-};
-update();
+var fileInput = document.getElementById('fileInput');
+
+
+
+// Update the processing to handle file input
+fileInput.addEventListener('change', function(e) {
+    if (this.files.length === 0) {
+        console.log('No file selected.');
+        return;
+    }
+
+    var file = this.files[0];
+    var reader = new FileReader();
+
+    reader.onload = function(e) {
+        var content = e.target.result;
+        
+        // Convert the uploaded file's content to GeoJSON
+        var doc = (new DOMParser()).parseFromString(content, 'text/xml');
+        out.value = JSON.stringify(toGeoJSON[format.value](doc), null, 4);
+    };
+
+    reader.readAsText(file);
+});
+// var input = document.getElementById('in');
+// var out = document.getElementById('output');
+// var format = document.getElementById('format');
+// input.onchange = input.onkeyup = format.onchange = update = function() {
+//     out.value = JSON.stringify(toGeoJSON[format.value]((new DOMParser()).parseFromString(input.value, 'text/xml')), null, 4);
+// };
+// update();
         </script>
         <script type="text/javascript">
   var _gauges = _gauges || [];
